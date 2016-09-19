@@ -64,14 +64,7 @@
 
 - (instancetype)initWithCoder:(NSCoder *)coder
 {
-    __weak typeof(self) welf = self; // thank you John Siracusa!
-    _contentView = [[BCMeshContentView alloc] initWithFrame:self.bounds
-                                                changeBlock:^{
-                                                    [welf setNeedsContentRendering];
-                                                } tickBlock:^(CADisplayLink *displayLink) {
-                                                    [welf displayLinkTick:displayLink];
-                                                }];
-
+    [self createContentView]; //has to be done before deserializing from nib
     self = [super initWithCoder:coder];
     if (self) {
         [self commonInit];
@@ -83,7 +76,6 @@
 - (void)commonInit
 {
     self.opaque = NO;
-    self.translatesAutoresizingMaskIntoConstraints = NO;
     
     _glkView = [[GLKView alloc] initWithFrame:self.bounds context:[BCMeshTransformView renderingContext]];
     _glkView.delegate = self;
@@ -101,14 +93,6 @@
     contentViewWrapperView.translatesAutoresizingMaskIntoConstraints = NO;
     contentViewWrapperView.clipsToBounds = YES;
     [super addSubview:contentViewWrapperView];
-    
-//    __weak typeof(self) welf = self; // thank you John Siracusa!
-//    _contentView = [[BCMeshContentView alloc] initWithFrame:self.bounds
-//                                                changeBlock:^{
-//                                                    [welf setNeedsContentRendering];
-//                                                } tickBlock:^(CADisplayLink *displayLink) {
-//                                                    [welf displayLinkTick:displayLink];
-//                                                }];
     
     [contentViewWrapperView addSubview:_contentView];
 
@@ -133,7 +117,19 @@
     [super bringSubviewToFront:_glkView];
 }
 
-- (void)setupWrapperContentViewConstraints {
+- (void)createContentView
+{
+    __weak typeof(self) welf = self; // thank you John Siracusa!
+    _contentView = [[BCMeshContentView alloc] initWithFrame:self.bounds
+                                                changeBlock:^{
+                                                    [welf setNeedsContentRendering];
+                                                } tickBlock:^(CADisplayLink *displayLink) {
+                                                    [welf displayLinkTick:displayLink];
+                                                }];
+}
+
+- (void)setupWrapperContentViewConstraints
+{
     
         UIView *contentViewWrapperView = self.contentView.superview;
         [contentViewWrapperView addConstraint:[NSLayoutConstraint constraintWithItem:contentViewWrapperView
@@ -429,15 +425,15 @@
     return 0.0;
 }
 
-#pragma mark - Warning Methods
+#pragma mark - UIView hierarchy proxying to contentView
 
-// A simple warning for convenience's sake
-
-- (void)addSubview:(UIView *)view {
+- (void)addSubview:(UIView *)view
+{
     [self.contentView addSubview:view];
 }
 
-- (void)addConstraint:(NSLayoutConstraint *)constraint {
+- (void)addConstraint:(NSLayoutConstraint *)constraint
+{
     if (constraint.firstItem == self) {
         [constraint setValue:self.contentView forKey:@"firstItem"];
     } else if (constraint.secondItem == self) {
@@ -446,7 +442,8 @@
     [self.contentView addConstraint:constraint];
 }
 
-- (CGSize)intrinsicContentSize {
+- (CGSize)intrinsicContentSize
+{
     return [self.contentView intrinsicContentSize];
 }
 
