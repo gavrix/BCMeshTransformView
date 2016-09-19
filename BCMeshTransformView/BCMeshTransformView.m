@@ -64,6 +64,14 @@
 
 - (instancetype)initWithCoder:(NSCoder *)coder
 {
+    __weak typeof(self) welf = self; // thank you John Siracusa!
+    _contentView = [[BCMeshContentView alloc] initWithFrame:self.bounds
+                                                changeBlock:^{
+                                                    [welf setNeedsContentRendering];
+                                                } tickBlock:^(CADisplayLink *displayLink) {
+                                                    [welf displayLinkTick:displayLink];
+                                                }];
+
     self = [super initWithCoder:coder];
     if (self) {
         [self commonInit];
@@ -75,6 +83,7 @@
 - (void)commonInit
 {
     self.opaque = NO;
+    self.translatesAutoresizingMaskIntoConstraints = NO;
     
     _glkView = [[GLKView alloc] initWithFrame:self.bounds context:[BCMeshTransformView renderingContext]];
     _glkView.delegate = self;
@@ -89,19 +98,20 @@
     _supplementaryTransform = CATransform3DIdentity;
     
     UIView *contentViewWrapperView = [UIView new];
+    contentViewWrapperView.translatesAutoresizingMaskIntoConstraints = NO;
     contentViewWrapperView.clipsToBounds = YES;
     [super addSubview:contentViewWrapperView];
     
-    __weak typeof(self) welf = self; // thank you John Siracusa!
-    _contentView = [[BCMeshContentView alloc] initWithFrame:self.bounds
-                                                changeBlock:^{
-                                                    [welf setNeedsContentRendering];
-                                                } tickBlock:^(CADisplayLink *displayLink) {
-                                                    [welf displayLinkTick:displayLink];
-                                                }];
+//    __weak typeof(self) welf = self; // thank you John Siracusa!
+//    _contentView = [[BCMeshContentView alloc] initWithFrame:self.bounds
+//                                                changeBlock:^{
+//                                                    [welf setNeedsContentRendering];
+//                                                } tickBlock:^(CADisplayLink *displayLink) {
+//                                                    [welf displayLinkTick:displayLink];
+//                                                }];
     
     [contentViewWrapperView addSubview:_contentView];
-    
+
     _displayLink = [CADisplayLink displayLinkWithTarget:_contentView selector:@selector(displayLinkTick:)];
     _displayLink.paused = YES;
     [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
@@ -118,6 +128,71 @@
     [self setupGL];
     
     self.meshTransform = [BCMutableMeshTransform identityMeshTransformWithNumberOfRows:1 numberOfColumns:1];
+    [self setupWrapperContentViewConstraints];
+    
+    [super bringSubviewToFront:_glkView];
+}
+
+- (void)setupWrapperContentViewConstraints {
+    
+        UIView *contentViewWrapperView = self.contentView.superview;
+        [contentViewWrapperView addConstraint:[NSLayoutConstraint constraintWithItem:contentViewWrapperView
+                                                                           attribute:NSLayoutAttributeLeading
+                                                                           relatedBy:NSLayoutRelationEqual
+                                                                              toItem:_contentView
+                                                                           attribute:NSLayoutAttributeLeading
+                                                                          multiplier:1
+                                                                            constant:0]];
+        [contentViewWrapperView addConstraint:[NSLayoutConstraint constraintWithItem:contentViewWrapperView
+                                                                           attribute:NSLayoutAttributeTop
+                                                                           relatedBy:NSLayoutRelationEqual
+                                                                              toItem:_contentView
+                                                                           attribute:NSLayoutAttributeTop
+                                                                          multiplier:1
+                                                                            constant:0]];
+        [contentViewWrapperView addConstraint:[NSLayoutConstraint constraintWithItem:contentViewWrapperView
+                                                                           attribute:NSLayoutAttributeBottom
+                                                                           relatedBy:NSLayoutRelationEqual
+                                                                              toItem:_contentView
+                                                                           attribute:NSLayoutAttributeBottom
+                                                                          multiplier:1
+                                                                            constant:0]];
+        [contentViewWrapperView addConstraint:[NSLayoutConstraint constraintWithItem:contentViewWrapperView
+                                                                           attribute:NSLayoutAttributeTrailing
+                                                                           relatedBy:NSLayoutRelationEqual
+                                                                              toItem:_contentView
+                                                                           attribute:NSLayoutAttributeTrailing
+                                                                          multiplier:1
+                                                                            constant:0]];
+        
+        [super addConstraint:[NSLayoutConstraint constraintWithItem:self
+                                                         attribute:NSLayoutAttributeLeading
+                                                         relatedBy:NSLayoutRelationEqual
+                                                            toItem:contentViewWrapperView
+                                                         attribute:NSLayoutAttributeLeading
+                                                        multiplier:1
+                                                          constant:0]];
+        [super addConstraint:[NSLayoutConstraint constraintWithItem:self
+                                                         attribute:NSLayoutAttributeTop
+                                                         relatedBy:NSLayoutRelationEqual
+                                                            toItem:contentViewWrapperView
+                                                         attribute:NSLayoutAttributeTop
+                                                        multiplier:1
+                                                          constant:0]];
+        [super addConstraint:[NSLayoutConstraint constraintWithItem:self
+                                                         attribute:NSLayoutAttributeBottom
+                                                         relatedBy:NSLayoutRelationEqual
+                                                            toItem:contentViewWrapperView
+                                                         attribute:NSLayoutAttributeBottom
+                                                        multiplier:1
+                                                          constant:0]];
+        [super addConstraint:[NSLayoutConstraint constraintWithItem:self
+                                                         attribute:NSLayoutAttributeTrailing
+                                                         relatedBy:NSLayoutRelationEqual
+                                                            toItem:contentViewWrapperView
+                                                         attribute:NSLayoutAttributeTrailing
+                                                        multiplier:1
+                                                          constant:0]];                
 }
 
 - (void)layoutSubviews
@@ -358,10 +433,21 @@
 
 // A simple warning for convenience's sake
 
-- (void)addSubview:(UIView *)view
-{
-    [super addSubview:view];
-    NSLog(@"Warning: do not add a subview directly to BCMeshTransformView. Add it to contentView instead.");
+- (void)addSubview:(UIView *)view {
+    [self.contentView addSubview:view];
+}
+
+- (void)addConstraint:(NSLayoutConstraint *)constraint {
+    if (constraint.firstItem == self) {
+        [constraint setValue:self.contentView forKey:@"firstItem"];
+    } else if (constraint.secondItem == self) {
+        [constraint setValue:self.contentView forKey:@"secondItem"];
+    }
+    [self.contentView addConstraint:constraint];
+}
+
+- (CGSize)intrinsicContentSize {
+    return [self.contentView intrinsicContentSize];
 }
 
 @end
