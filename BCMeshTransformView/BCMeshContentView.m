@@ -75,6 +75,7 @@
 {
     self = [super initWithFrame:frame];
     if (self) {
+        self.translatesAutoresizingMaskIntoConstraints = NO;
         self.changeBlock = changeBlock;
         self.tickBlock = tickBlock;
         self.observedLayers = [NSMutableSet set];
