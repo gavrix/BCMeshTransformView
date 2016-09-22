@@ -434,12 +434,25 @@
 
 - (void)addConstraint:(NSLayoutConstraint *)constraint
 {
-    if (constraint.firstItem == self) {
-        [constraint setValue:self.contentView forKey:@"firstItem"];
-    } else if (constraint.secondItem == self) {
-        [constraint setValue:self.contentView forKey:@"secondItem"];
-    }
-    [self.contentView addConstraint:constraint];
+	NSLayoutConstraint *newConstraint = nil;
+	if (constraint.firstItem == self) {
+		newConstraint = [NSLayoutConstraint constraintWithItem:self.contentView
+													 attribute:constraint.firstAttribute
+													 relatedBy:constraint.relation
+														toItem:constraint.secondItem
+													 attribute:constraint.secondAttribute
+													multiplier:constraint.multiplier
+													  constant:constraint.constant];
+	} else if (constraint.secondItem == self) {
+		newConstraint = [NSLayoutConstraint constraintWithItem:constraint.firstItem
+													 attribute:constraint.firstAttribute
+													 relatedBy:constraint.relation
+														toItem:self.contentView
+													 attribute:constraint.secondAttribute
+													multiplier:constraint.multiplier
+													  constant:constraint.constant];
+	}
+	[self.contentView addConstraint:newConstraint];
 }
 
 - (CGSize)intrinsicContentSize
